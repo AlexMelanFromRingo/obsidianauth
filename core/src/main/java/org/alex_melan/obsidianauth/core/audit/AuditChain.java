@@ -75,6 +75,94 @@ public final class AuditChain {
         });
     }
 
+    /**
+     * Startup tamper check (FR-008). Reconciles the persisted {@code audit_head} pointer in
+     * the DB with the actual tail entry of {@code audit.log}. Three things must hold:
+     *
+     * <ol>
+     *   <li>the log exists and has an entry at the head's recorded byte offset;</li>
+     *   <li>that entry's declared {@code this_hash} equals the DB head's {@code this_hash};</li>
+     *   <li>re-hashing the entry's canonical form reproduces that declared {@code this_hash}
+     *       — so a same-length mutation of any field in the tail entry is caught too.</li>
+     * </ol>
+     *
+     * <p>Any failure completes the returned future exceptionally with
+     * {@link AuditTamperException}. Dispatched on the {@link AsyncExecutor}; callers (the
+     * plugin's {@code onEnable}) MUST treat an exceptional completion as fatal and refuse to
+     * enable.
+     */
+    public CompletableFuture<Void> verifyOnStartup() {
+        return async.submit((java.util.function.Supplier<Void>) () -> {
+            var maybeHead = auditDao.readHead().join();
+            if (maybeHead.isEmpty()) {
+                // No audit history yet — genesis state, nothing to verify.
+                return null;
+            }
+            AuditHead head = maybeHead.get();
+            String tailLine = readTailEntry(head.fileOffset());
+            if (tailLine == null) {
+                throw new AuditTamperException(
+                        "[ObsidianAuth] AUDIT TAMPER DETECTED: audit_head records seq=" + head.seq()
+                                + " at offset " + head.fileOffset()
+                                + " but audit.log is missing, empty, or shorter than expected");
+            }
+            String declaredThisHash = extractThisHash(tailLine);
+            String expected = toHex(head.thisHash());
+            if (declaredThisHash == null || !expected.equalsIgnoreCase(declaredThisHash)) {
+                throw new AuditTamperException(
+                        "[ObsidianAuth] AUDIT TAMPER DETECTED: audit.log tail this_hash="
+                                + declaredThisHash + " does not match audit_head this_hash="
+                                + expected);
+            }
+            // Re-hash the tail entry's canonical form (the rendered line with the
+            // "this_hash" member removed) and confirm it reproduces the declared hash.
+            String canonical = tailLine.replace(
+                    "\"this_hash\":\"" + declaredThisHash + "\",", "");
+            String recomputed = toHex(sha256(canonical.getBytes(StandardCharsets.UTF_8)));
+            if (!recomputed.equalsIgnoreCase(declaredThisHash)) {
+                throw new AuditTamperException(
+                        "[ObsidianAuth] AUDIT TAMPER DETECTED: audit.log tail entry body does"
+                                + " not hash to its declared this_hash (seq=" + head.seq() + ")");
+            }
+            return null;
+        });
+    }
+
+    /** Reads the single audit-log line that begins at {@code offset}, or {@code null} if absent. */
+    private String readTailEntry(long offset) {
+        try {
+            if (!Files.exists(logFile)) {
+                return null;
+            }
+            try (RandomAccessFile raf = new RandomAccessFile(logFile.toFile(), "r")) {
+                long length = raf.length();
+                if (offset < 0 || offset >= length) {
+                    return null;
+                }
+                raf.seek(offset);
+                byte[] buf = new byte[(int) (length - offset)];
+                raf.readFully(buf);
+                String chunk = new String(buf, StandardCharsets.UTF_8);
+                int newline = chunk.indexOf('\n');
+                return (newline >= 0) ? chunk.substring(0, newline) : chunk;
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("failed to read audit-log tail: " + logFile, e);
+        }
+    }
+
+    /** Extracts the {@code this_hash} hex string from a rendered audit-log line. */
+    private static String extractThisHash(String line) {
+        final String marker = "\"this_hash\":\"";
+        int i = line.indexOf(marker);
+        if (i < 0) {
+            return null;
+        }
+        int start = i + marker.length();
+        int end = line.indexOf('"', start);
+        return (end < 0) ? null : line.substring(start, end);
+    }
+
     AuditHead appendSync(AuditEntry entry) {
         AuditHead currentHead = headCache.get();
         long expectedSeq = (currentHead == null) ? 0L : currentHead.seq();

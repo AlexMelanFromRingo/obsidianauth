@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.alex_melan.obsidianauth.core.config.TotpConfig;
+import org.alex_melan.obsidianauth.paper.config.LiveConfig;
 import org.alex_melan.obsidianauth.paper.session.PaperSession;
 import org.alex_melan.obsidianauth.paper.session.SessionRegistry;
 import org.alex_melan.obsidianauth.paper.verification.ChatVerificationService;
@@ -30,14 +31,14 @@ public final class PreAuthChatListener implements Listener {
 
     private final SessionRegistry sessions;
     private final ChatVerificationService verificationService;
-    private final TotpConfig config;
+    private final LiveConfig liveConfig;
 
     public PreAuthChatListener(SessionRegistry sessions,
                                ChatVerificationService verificationService,
-                               TotpConfig config) {
+                               LiveConfig liveConfig) {
         this.sessions = sessions;
         this.verificationService = verificationService;
-        this.config = config;
+        this.liveConfig = liveConfig;
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
@@ -58,6 +59,7 @@ public final class PreAuthChatListener implements Listener {
             return;
         }
 
+        TotpConfig config = liveConfig.current();
         String text = PLAIN.serialize(event.message()).trim();
         if (text.length() != config.digits() || !text.chars().allMatch(Character::isDigit)) {
             event.getPlayer().sendMessage(Component.text(

@@ -21,6 +21,7 @@ import org.alex_melan.obsidianauth.core.storage.EnrollmentDao;
 import org.alex_melan.obsidianauth.core.storage.StoredEnrollment;
 import org.alex_melan.obsidianauth.core.totp.TotpGenerator;
 import org.alex_melan.obsidianauth.core.totp.TotpVerifier;
+import org.alex_melan.obsidianauth.paper.config.LiveConfig;
 import org.alex_melan.obsidianauth.paper.enrollment.CardDeliveryService;
 import org.alex_melan.obsidianauth.paper.session.PaperSession;
 import org.bukkit.entity.Player;
@@ -46,7 +47,7 @@ public final class ChatVerificationService {
     private final EnrollmentDao dao;
     private final AesGcmSealer sealer;
     private final KeyMaterial activeKey;
-    private final TotpConfig config;
+    private final LiveConfig liveConfig;
     private final AuditChain audit;
     private final AttemptLimiter rateLimiter;
     private final CardDeliveryService cardDelivery;
@@ -57,7 +58,7 @@ public final class ChatVerificationService {
     public ChatVerificationService(EnrollmentDao dao,
                                    AesGcmSealer sealer,
                                    KeyMaterial activeKey,
-                                   TotpConfig config,
+                                   LiveConfig liveConfig,
                                    AuditChain audit,
                                    AttemptLimiter rateLimiter,
                                    CardDeliveryService cardDelivery,
@@ -67,7 +68,7 @@ public final class ChatVerificationService {
         this.dao = dao;
         this.sealer = sealer;
         this.activeKey = activeKey;
-        this.config = config;
+        this.liveConfig = liveConfig;
         this.audit = audit;
         this.rateLimiter = rateLimiter;
         this.cardDelivery = cardDelivery;
@@ -98,6 +99,8 @@ public final class ChatVerificationService {
 
     /** Runs entirely on the async pool. */
     private VerificationOutcome runPipeline(UUID uuid, String codeText, byte[] sourceIp) {
+        // Snapshot the live config once — a concurrent /2fa-admin reload must not tear this run.
+        TotpConfig config = liveConfig.current();
         // 1. Rate-limit pre-check.
         if (rateLimiter.check(uuid, sourceIp) == AttemptLimiter.Outcome.LOCKED_OUT) {
             return VerificationOutcome.LOCKED_OUT;

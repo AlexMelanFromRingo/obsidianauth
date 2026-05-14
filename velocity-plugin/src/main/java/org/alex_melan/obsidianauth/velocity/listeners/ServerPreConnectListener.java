@@ -44,6 +44,7 @@ public final class ServerPreConnectListener {
         // rely on Velocity's own connection attempt to fail; this listener simply logs the
         // intent so operators can see fail-closed routing is active.
         log.debug("fail-closed routing active; routing {} to {}",
-                event.getPlayer().getUsername(), target.get().getServerInfo().getName());
+                event.getPlayer().getUsername(),
+                target.orElseThrow().getServerInfo().getName());
     }
 }

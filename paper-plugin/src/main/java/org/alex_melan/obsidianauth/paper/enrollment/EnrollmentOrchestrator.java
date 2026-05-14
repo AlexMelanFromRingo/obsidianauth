@@ -20,6 +20,7 @@ import org.alex_melan.obsidianauth.core.storage.StoredEnrollment;
 import org.alex_melan.obsidianauth.core.totp.SecretGenerator;
 import org.alex_melan.obsidianauth.core.totp.TotpGenerator;
 import org.alex_melan.obsidianauth.core.totp.TotpUri;
+import org.alex_melan.obsidianauth.paper.config.LiveConfig;
 import org.alex_melan.obsidianauth.paper.session.PaperSession;
 import org.bukkit.entity.Player;
 
@@ -46,7 +47,7 @@ public final class EnrollmentOrchestrator {
     private final KeyMaterial activeKey;
     private final EnrollmentDao dao;
     private final AuditChain audit;
-    private final TotpConfig config;
+    private final LiveConfig liveConfig;
     private final CardDeliveryService cardDelivery;
     private final AsyncExecutor async;
     private final SyncExecutor sync;
@@ -55,7 +56,7 @@ public final class EnrollmentOrchestrator {
                                   KeyMaterial activeKey,
                                   EnrollmentDao dao,
                                   AuditChain audit,
-                                  TotpConfig config,
+                                  LiveConfig liveConfig,
                                   CardDeliveryService cardDelivery,
                                   AsyncExecutor async,
                                   SyncExecutor sync) {
@@ -63,7 +64,7 @@ public final class EnrollmentOrchestrator {
         this.activeKey = activeKey;
         this.dao = dao;
         this.audit = audit;
-        this.config = config;
+        this.liveConfig = liveConfig;
         this.cardDelivery = cardDelivery;
         this.async = async;
         this.sync = sync;
@@ -95,6 +96,8 @@ public final class EnrollmentOrchestrator {
 
     private CompletableFuture<Void> performFreshEnrollment(Player player, PaperSession session, UUID uuid) {
         return async.submit(() -> {
+            // Snapshot the live config once so a concurrent /2fa-admin reload can't tear this flow.
+            TotpConfig config = liveConfig.current();
             // CPU-bound: generate secret, seal, build URI.
             byte[] secret = secretGenerator.generate();
             String base32Secret = SecretGenerator.toBase32(secret);
@@ -157,7 +160,8 @@ public final class EnrollmentOrchestrator {
                         .clickEvent(ClickEvent.copyToClipboard(base32Secret)));
         player.sendMessage(clickable);
         player.sendMessage(Component.text(
-                "Then type the 6-digit code into chat to unlock.", NamedTextColor.AQUA));
+                "Then type the " + liveConfig.current().digits()
+                        + "-digit code into chat to unlock.", NamedTextColor.AQUA));
     }
 
     private record EnrollmentArtifacts(boolean inserted, String base32Secret, String uri) {}
@@ -165,6 +169,7 @@ public final class EnrollmentOrchestrator {
     /** Compute the otpauth URI for an EXISTING enrolled player (for the post-quit secret-refresh path). */
     public Optional<String> uriFor(Player player, byte[] secretPlaintext) {
         if (secretPlaintext == null) return Optional.empty();
+        TotpConfig config = liveConfig.current();
         String b32 = SecretGenerator.toBase32(secretPlaintext);
         String issuer = config.issuerName();
         String account = config.accountLabelTemplate().replace("{username}", player.getName());

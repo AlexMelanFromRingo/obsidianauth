@@ -18,7 +18,12 @@ import org.alex_melan.obsidianauth.core.storage.JdbcEnrollmentDao;
 import org.alex_melan.obsidianauth.core.storage.MigrationRunner;
 import org.alex_melan.obsidianauth.paper.async.PlatformProbe;
 import org.alex_melan.obsidianauth.paper.channel.PaperChannelHandler;
+import org.alex_melan.obsidianauth.paper.command.Permissions;
+import org.alex_melan.obsidianauth.paper.command.TwoFaAdminCommand;
+import org.alex_melan.obsidianauth.paper.keyrotation.KeyMigrationService;
+import org.alex_melan.obsidianauth.paper.config.LiveConfig;
 import org.alex_melan.obsidianauth.paper.config.PaperConfigLoader;
+import org.alex_melan.obsidianauth.paper.config.PaperConfigReloader;
 import org.alex_melan.obsidianauth.paper.enrollment.CardDeliveryService;
 import org.alex_melan.obsidianauth.paper.enrollment.EnrollmentOrchestrator;
 import org.alex_melan.obsidianauth.paper.enrollment.SlotBorrowStash;
@@ -32,6 +37,7 @@ import org.alex_melan.obsidianauth.paper.session.SessionRegistry;
 import org.alex_melan.obsidianauth.paper.verification.ChatVerificationService;
 import org.alex_melan.obsidianauth.core.channel.ChannelCodec;
 import org.alex_melan.obsidianauth.core.channel.ChannelId;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -50,6 +56,7 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
 
     private PlatformProbe.Executors executors;
     private TotpConfig config;
+    private LiveConfig liveConfig;
     private HikariDataSource dataSource;
     private JdbcEnrollmentDao enrollmentDao;
     private JdbcAuditDao auditDao;
@@ -64,6 +71,7 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
     private CardDeliveryService cardDeliveryService;
     private EnrollmentOrchestrator enrollmentOrchestrator;
     private ChatVerificationService chatVerificationService;
+    private PaperChannelHandler channelHandler;
 
     @Override
     public void onEnable() {
@@ -103,6 +111,7 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
 
         // Load and validate config — refuses to enable on any rule violation (FR-025).
         config = PaperConfigLoader.load(getConfig());
+        liveConfig = new LiveConfig(config);
 
         // Resolve the AES master key (KMS > file > env precedence, FR-019).
         String backend = getConfig().getString("storage.backend", "sqlite");
@@ -131,6 +140,10 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         Path auditFile = Path.of(getConfig().getString("audit.file", "plugins/ObsidianAuth/audit.log"));
         auditChain = new AuditChain(async, auditFile, auditDao);
         auditChain.loadHead().join();
+        // Startup tamper check (FR-008): a mismatch between the DB audit head and the
+        // audit.log tail throws AuditTamperException, which the onEnable catch turns into a
+        // SEVERE log line and a refusal to enable.
+        auditChain.verifyOnStartup().join();
 
         rateLimiter = new AttemptLimiter(
                 config.rateLimitMaxFailures(),
@@ -143,10 +156,10 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         if (config.proxyChannelEnabled()) {
             channelHmacSecret = resolveChannelHmacSecret();
             channelCodec = new ChannelCodec(async);
-            PaperChannelHandler handler = new PaperChannelHandler(
+            channelHandler = new PaperChannelHandler(
                     channelCodec, channelHmacSecret, async, sync,
                     sessionRegistry, auditChain, this, getLogger());
-            getServer().getMessenger().registerIncomingPluginChannel(this, ChannelId.ID, handler);
+            getServer().getMessenger().registerIncomingPluginChannel(this, ChannelId.ID, channelHandler);
             getServer().getMessenger().registerOutgoingPluginChannel(this, ChannelId.ID);
             getLogger().info("Plugin-message channel '" + ChannelId.ID + "' registered.");
         }
@@ -157,9 +170,9 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         slotBorrowStash = new SlotBorrowStash(async, stashDir);
         cardDeliveryService = new CardDeliveryService(async, sync, slotBorrowStash);
         enrollmentOrchestrator = new EnrollmentOrchestrator(
-                sealer, activeKey, enrollmentDao, auditChain, config, cardDeliveryService, async, sync);
+                sealer, activeKey, enrollmentDao, auditChain, liveConfig, cardDeliveryService, async, sync);
         chatVerificationService = new ChatVerificationService(
-                enrollmentDao, sealer, activeKey, config, auditChain, rateLimiter,
+                enrollmentDao, sealer, activeKey, liveConfig, auditChain, rateLimiter,
                 cardDeliveryService, async, sync, getLogger());
 
         // Lockdown listener matrix (FR-006 / FR-007).
@@ -170,8 +183,36 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         pm.registerEvents(new PreAuthInteractionListener(sessionRegistry), this);
         pm.registerEvents(new PreAuthInventoryListener(sessionRegistry), this);
         pm.registerEvents(new PreAuthCommandListener(sessionRegistry), this);
-        pm.registerEvents(new PreAuthChatListener(sessionRegistry, chatVerificationService, config), this);
+        pm.registerEvents(new PreAuthChatListener(sessionRegistry, chatVerificationService, liveConfig), this);
         getLogger().info("Lockdown listener matrix registered (6 listeners).");
+
+        // Admin command surface (/2fa-admin reset|reload|migrate-keys|migrate-cancel).
+        PaperConfigReloader configReloader = new PaperConfigReloader(
+                liveConfig, getConfig(),
+                () -> { reloadConfig(); return getConfig(); });
+        // Single-version deployment: only the active key is resolvable. Older rows (and thus
+        // a non-trivial migration) cannot exist until versioned key sources land — a
+        // post-MVP feature — so this provider intentionally rejects any other version.
+        KeyMigrationService.KeyProvider keyProvider = version -> {
+            if (version == activeKey.version()) {
+                return activeKey;
+            }
+            throw new IllegalStateException(
+                    "no key material configured for version " + version
+                            + " — multi-version key sources are out of MVP scope");
+        };
+        KeyMigrationService keyMigrationService = new KeyMigrationService(
+                enrollmentDao, sealer, keyProvider, activeKey.version(), auditChain, async);
+        TwoFaAdminCommand adminCommand = new TwoFaAdminCommand(
+                async, sync, new Permissions(config), enrollmentDao, auditChain,
+                sessionRegistry, channelHandler, configReloader, keyMigrationService, getLogger());
+        PluginCommand pc = getCommand("2fa-admin");
+        if (pc == null) {
+            throw new IllegalStateException("command '2fa-admin' missing from plugin.yml");
+        }
+        pc.setExecutor(adminCommand);
+        pc.setTabCompleter(adminCommand);
+        getLogger().info("Admin command '/2fa-admin' registered.");
     }
 
     private HikariDataSource openDataSource(String backend) {

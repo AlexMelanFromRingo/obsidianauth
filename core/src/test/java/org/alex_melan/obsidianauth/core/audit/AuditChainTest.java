@@ -1,6 +1,8 @@
 package org.alex_melan.obsidianauth.core.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -115,6 +117,49 @@ class AuditChainTest {
         byte[] reComputedHash = sha256(reComputedCanonical.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         assertThat(reComputedHash).isNotEqualTo(head.thisHash());
         assertThat(tampered).isNotEqualTo(original);
+    }
+
+    // --- startup integrity check (verifyOnStartup) ---
+
+    @Test
+    void verifyOnStartup_passesForEmptyHistory() {
+        // No appends yet — there is no head row, so there is nothing to reconcile.
+        assertThatCode(() -> chain.verifyOnStartup().join()).doesNotThrowAnyException();
+    }
+
+    @Test
+    void verifyOnStartup_passesForIntactChain() {
+        chain.appendSync(sampleEntry());
+        chain.appendSync(sampleEntry());
+
+        assertThatCode(() -> chain.verifyOnStartup().join()).doesNotThrowAnyException();
+    }
+
+    @Test
+    void verifyOnStartup_failsWhenTailEntryBodyMutated() throws Exception {
+        chain.appendSync(sampleEntry());
+
+        // Flip the event type in the on-disk line WITHOUT touching this_hash. "ENROLL_OK" and
+        // "VERIFY_OK" are the same length, so byte offsets are preserved — only a re-hash of
+        // the entry body can catch this.
+        Path logFile = tmp.resolve("audit.log");
+        String original = Files.readString(logFile);
+        Files.writeString(logFile, original.replace("\"ENROLL_OK\"", "\"VERIFY_OK\""));
+
+        assertThatThrownBy(() -> chain.verifyOnStartup().join())
+                .hasCauseInstanceOf(AuditTamperException.class)
+                .hasMessageContaining("AUDIT TAMPER DETECTED");
+    }
+
+    @Test
+    void verifyOnStartup_failsWhenLogTruncated() throws Exception {
+        chain.appendSync(sampleEntry());
+        // The DB still records a head, but the log file no longer has the entry.
+        Files.write(tmp.resolve("audit.log"), new byte[0]);
+
+        assertThatThrownBy(() -> chain.verifyOnStartup().join())
+                .hasCauseInstanceOf(AuditTamperException.class)
+                .hasMessageContaining("AUDIT TAMPER DETECTED");
     }
 
     // --- helpers ---
