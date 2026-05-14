@@ -32,7 +32,13 @@ public final class MigrationRunner {
     }
 
     int migrateSync() {
-        Flyway flyway = Flyway.configure()
+        // Configure Flyway with the classloader that loaded THIS class — the plugin's
+        // PluginClassLoader at runtime (the core classes are shaded into the plugin JAR),
+        // the test classloader under Gradle. Either way it is the classloader that actually
+        // has db/migration/*.sql on it; relying on the thread context classloader instead
+        // is fragile (a plain worker thread inherits the server's classloader and Flyway
+        // then scans the wrong classpath, finding zero migrations).
+        Flyway flyway = Flyway.configure(MigrationRunner.class.getClassLoader())
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .placeholders(dialect.placeholders())

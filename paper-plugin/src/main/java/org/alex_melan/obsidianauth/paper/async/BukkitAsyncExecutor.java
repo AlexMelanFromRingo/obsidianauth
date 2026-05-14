@@ -35,6 +35,11 @@ public final class BukkitAsyncExecutor implements AsyncExecutor {
 
     public BukkitAsyncExecutor(Plugin plugin) {
         String pluginName = plugin.getName();
+        // The plugin's own PluginClassLoader — NOT the server thread's classloader, which is
+        // what a freshly-created thread would otherwise inherit. Pool threads must carry this
+        // so TCCL-sensitive lookups (notably Flyway's classpath scan for db/migration/*.sql,
+        // which lives inside the plugin JAR) resolve against the plugin's resources.
+        ClassLoader pluginClassLoader = plugin.getClass().getClassLoader();
         ThreadFactory factory = new ThreadFactory() {
             private final AtomicInteger counter = new AtomicInteger(1);
 
@@ -42,6 +47,7 @@ public final class BukkitAsyncExecutor implements AsyncExecutor {
             public Thread newThread(Runnable runnable) {
                 Thread thread = new Thread(runnable, pluginName + "-async-" + counter.getAndIncrement());
                 thread.setDaemon(true);
+                thread.setContextClassLoader(pluginClassLoader);
                 return thread;
             }
         };
