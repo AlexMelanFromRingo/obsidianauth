@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import org.alex_melan.obsidianauth.paper.IntegrationTestBase;
 import org.alex_melan.obsidianauth.paper.session.PaperSession;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -43,6 +44,12 @@ class EnrollmentFlowIT extends IntegrationTestBase {
             // Freedom restored.
             assertThat(session.state()).isEqualTo(PaperSession.State.AUTHED);
             assertThat(session.pendingVerification()).isFalse();
+            // ...and the QR card is taken back — slot 0 is empty again (FR-003c).
+            ItemStack slotZero = player.getInventory().getItem(0);
+            assertThat(slotZero == null || slotZero.getType() == Material.AIR)
+                    .as("QR card must be removed from the hotbar after successful verification")
+                    .isTrue();
+            assertThat(session.cardSlot()).isEmpty();
         }
     }
 

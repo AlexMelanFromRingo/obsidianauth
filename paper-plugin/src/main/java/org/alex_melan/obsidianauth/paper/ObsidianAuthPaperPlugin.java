@@ -168,7 +168,7 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         Path stashDir = Path.of(getConfig().getString("audit.file", "plugins/ObsidianAuth/audit.log"))
                 .getParent().resolve("stash");
         slotBorrowStash = new SlotBorrowStash(async, stashDir);
-        cardDeliveryService = new CardDeliveryService(async, sync, slotBorrowStash);
+        cardDeliveryService = new CardDeliveryService(async, sync, slotBorrowStash, getLogger());
         enrollmentOrchestrator = new EnrollmentOrchestrator(
                 sealer, activeKey, enrollmentDao, auditChain, liveConfig, cardDeliveryService, async, sync);
         chatVerificationService = new ChatVerificationService(
@@ -178,7 +178,7 @@ public final class ObsidianAuthPaperPlugin extends JavaPlugin {
         // Lockdown listener matrix (FR-006 / FR-007).
         var pm = getServer().getPluginManager();
         pm.registerEvents(new JoinQuitListener(
-                async, sessionRegistry, enrollmentDao, enrollmentOrchestrator, cardDeliveryService), this);
+                sessionRegistry, enrollmentOrchestrator, cardDeliveryService, getLogger()), this);
         pm.registerEvents(new PreAuthMovementListener(sessionRegistry), this);
         pm.registerEvents(new PreAuthInteractionListener(sessionRegistry), this);
         pm.registerEvents(new PreAuthInventoryListener(sessionRegistry), this);

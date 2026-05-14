@@ -145,8 +145,11 @@ public final class EnrollmentOrchestrator {
 
     private void sendAwaitingCodePrompt(Player player) {
         player.sendMessage(Component.text(
-                "Authentication required. Type your TOTP code in chat to continue.",
-                NamedTextColor.YELLOW));
+                "Welcome back — this server is protected by 2FA.", NamedTextColor.AQUA));
+        player.sendMessage(Component.text(
+                "Type your " + liveConfig.current().digits()
+                        + "-digit code from your authenticator app into chat to unlock.",
+                NamedTextColor.AQUA));
     }
 
     private void sendIntroChat(Player player, String base32Secret) {

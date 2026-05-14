@@ -198,7 +198,11 @@ public final class ChatVerificationService {
         switch (outcome) {
             case SUCCESS -> {
                 session.setState(PaperSession.State.AUTHED);
-                cardDelivery.restoreStash(player);
+                cardDelivery.dismissCard(player, session).exceptionally(err -> {
+                    log.log(Level.WARNING,
+                            "failed to dismiss the QR card for " + player.getUniqueId(), err);
+                    return null;
+                });
                 player.sendMessage(Component.text("Verified — welcome.", NamedTextColor.GREEN));
             }
             case FAILED -> player.sendMessage(Component.text(

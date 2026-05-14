@@ -249,8 +249,15 @@ public final class JdbcEnrollmentDao implements EnrollmentDao {
         byte[] tag = rs.getBytes(4);
         int kv = rs.getInt(5);
         long enrolled = rs.getLong(6);
-        Long lastVerified = (Long) rs.getObject(7);
-        Long lastStep = (Long) rs.getObject(8);
+        // Nullable BIGINT columns MUST be read via getLong()+wasNull(), never (Long)getObject():
+        // the SQLite driver's getObject() returns an Integer for values that fit in 32 bits
+        // (a ~5.8e7 RFC 6238 step counter does), so the cast threw ClassCastException as soon
+        // as a row had a non-null last_step_consumed — i.e. on the first rejoin after a
+        // successful verification. getLong() always yields a long regardless of storage form.
+        long lastVerifiedRaw = rs.getLong(7);
+        Long lastVerified = rs.wasNull() ? null : lastVerifiedRaw;
+        long lastStepRaw = rs.getLong(8);
+        Long lastStep = rs.wasNull() ? null : lastStepRaw;
         long created = rs.getLong(9);
         return new StoredEnrollment(uuid, ct, nonce, tag, kv, enrolled, lastVerified, lastStep, created);
     }

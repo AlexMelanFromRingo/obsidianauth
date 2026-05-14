@@ -82,7 +82,8 @@ public final class EnrollmentHarness implements AutoCloseable {
 
         this.stashDir = tmp.resolve("stash");
         this.stash = new SlotBorrowStash(exec, stashDir);
-        this.cardDelivery = new CardDeliveryService(exec, exec, stash);
+        this.cardDelivery = new CardDeliveryService(
+                exec, exec, stash, Logger.getLogger("EnrollmentHarness"));
         this.orchestrator = new EnrollmentOrchestrator(
                 sealer, key, enrollmentDao, auditChain, liveConfig, cardDelivery, exec, exec);
         this.verification = new ChatVerificationService(

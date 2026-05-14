@@ -84,6 +84,24 @@ class JdbcEnrollmentDaoTest {
     }
 
     @Test
+    void findByPlayerUuid_readsBackAVerifiedRow() {
+        // Regression: after a successful verification the row carries a non-null
+        // last_step_consumed (a ~5.8e7 RFC 6238 counter that fits in 32 bits). Reading it
+        // back via (Long) getObject() threw ClassCastException on the SQLite driver — this
+        // is the read path a returning, already-enrolled player hits on rejoin.
+        UUID uuid = UUID.randomUUID();
+        dao.insertSync(sampleRecord(uuid, 1));
+        long stepCounter = 58_233_333L;          // ~ now / 30, fits in an int
+        long verifiedAt = 1_747_000_000_000L;    // ~ now in millis, does NOT fit in an int
+        assertThat(dao.recordVerificationSync(uuid, stepCounter, verifiedAt)).isTrue();
+
+        Optional<StoredEnrollment> back = dao.findByPlayerUuidSync(uuid);
+        assertThat(back).isPresent();
+        assertThat(back.get().lastStepConsumed()).isEqualTo(stepCounter);
+        assertThat(back.get().lastVerifiedAtMillis()).isEqualTo(verifiedAt);
+    }
+
+    @Test
     void delete_isIdempotent() {
         UUID uuid = UUID.randomUUID();
         dao.insertSync(sampleRecord(uuid, 1));

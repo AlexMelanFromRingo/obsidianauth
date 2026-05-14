@@ -60,7 +60,9 @@ public final class PreAuthChatListener implements Listener {
         }
 
         TotpConfig config = liveConfig.current();
-        String text = PLAIN.serialize(event.message()).trim();
+        // Strip ALL whitespace, not just the ends: authenticator apps commonly display the
+        // code grouped (e.g. "123 456") and players type it back that way.
+        String text = PLAIN.serialize(event.message()).replaceAll("\\s+", "");
         if (text.length() != config.digits() || !text.chars().allMatch(Character::isDigit)) {
             event.getPlayer().sendMessage(Component.text(
                     "Type your " + config.digits() + "-digit code to unlock.",

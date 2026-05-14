@@ -35,6 +35,8 @@ public final class PaperSession {
     private final AtomicInteger failureCount = new AtomicInteger(0);
     private volatile long lastAttemptAtMillis = 0L;
     private volatile Optional<Integer> activeMapId = Optional.empty();
+    /** Hotbar slot the QR card currently occupies (empty when no card is delivered). */
+    private volatile Optional<Integer> cardSlot = Optional.empty();
     private volatile boolean pendingVerification = false;
     private volatile Long pendingSecretRefreshKey = null;
 
@@ -61,6 +63,9 @@ public final class PaperSession {
 
     public Optional<Integer> activeMapId() { return activeMapId; }
     public void setActiveMapId(Optional<Integer> id) { this.activeMapId = id; }
+
+    public Optional<Integer> cardSlot() { return cardSlot; }
+    public void setCardSlot(Optional<Integer> slot) { this.cardSlot = slot; }
 
     public boolean pendingVerification() { return pendingVerification; }
     public void setPendingVerification(boolean v) { this.pendingVerification = v; }
