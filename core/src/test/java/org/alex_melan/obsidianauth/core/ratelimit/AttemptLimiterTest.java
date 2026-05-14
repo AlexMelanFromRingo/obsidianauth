@@ -84,6 +84,31 @@ class AttemptLimiterTest {
     }
 
     @Test
+    void retryAtMillis_reportsWhenTheOldestFailureAgesOut() {
+        AttemptLimiter rl = limiter(3, 60);   // 3 failures per 60-second window
+        UUID uuid = UUID.randomUUID();
+        byte[] ip = ipv4(10, 0, 0, 1);
+
+        long t0 = clock.get();
+        rl.recordFailure(uuid, ip);
+        clock.addAndGet(5_000);
+        rl.recordFailure(uuid, ip);
+        // Below threshold — retry-at is simply "now".
+        assertThat(rl.retryAtMillis(uuid, ip)).isEqualTo(clock.get());
+
+        // The third failure trips the lockout; it clears once the FIRST failure (at t0)
+        // ages out of the window — i.e. at t0 + 60s.
+        clock.addAndGet(5_000);
+        assertThat(rl.recordFailure(uuid, ip).outcome()).isEqualTo(AttemptLimiter.Outcome.LOCKED_OUT);
+        assertThat(rl.retryAtMillis(uuid, ip)).isEqualTo(t0 + 60_000L);
+
+        // Past that point the caller is free again.
+        clock.set(t0 + 60_001L);
+        assertThat(rl.check(uuid, ip)).isEqualTo(AttemptLimiter.Outcome.OK);
+        assertThat(rl.retryAtMillis(uuid, ip)).isEqualTo(clock.get());
+    }
+
+    @Test
     void check_doesNotRecord() {
         AttemptLimiter rl = limiter(1, 60);
         UUID uuid = UUID.randomUUID();

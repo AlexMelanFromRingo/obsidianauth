@@ -90,7 +90,47 @@ public final class AttemptLimiter {
         byAccount.remove(playerUuid);
     }
 
+    /**
+     * Earliest wall-clock millis at which the given account / source IP will clear the
+     * sliding-window lockout — i.e. when BOTH dimensions have decayed back below the
+     * threshold. Returns {@code now} when the caller is not currently locked out. Safe to
+     * call from the main / region thread (same locking discipline as {@link #check}).
+     */
+    public long retryAtMillis(UUID playerUuid, byte[] sourceIp) {
+        long now = clock.getAsLong();
+        long accountRetry = retryAtFor(byAccount, playerUuid, now);
+        long ipRetry = retryAtFor(byIp, new IpKey(sourceIp), now);
+        return Math.max(now, Math.max(accountRetry, ipRetry));
+    }
+
     // --- helpers ---
+
+    /** Earliest millis this one dimension drops below the threshold, or {@code 0} if already below. */
+    private <K> long retryAtFor(ConcurrentHashMap<K, Deque<Long>> map, K key, long now) {
+        Deque<Long> deque = map.get(key);
+        if (deque == null) return 0L;
+        synchronized (deque) {
+            evictExpired(deque, now);
+            int size = deque.size();
+            if (size < maxFailuresPerWindow) {
+                return 0L;
+            }
+            // To drop below the threshold, (size - max + 1) of the oldest timestamps must
+            // age out. The newest of those — the (size - max)-th oldest, 0-indexed — is the
+            // last to expire; once it does, the count is back under the limit.
+            int indexToShed = size - maxFailuresPerWindow;
+            long sheddingTimestamp = now;
+            int i = 0;
+            for (Long entry : deque) {   // ArrayDeque iterates head (oldest) → tail (newest)
+                if (i == indexToShed) {
+                    sheddingTimestamp = entry;
+                    break;
+                }
+                i++;
+            }
+            return sheddingTimestamp + windowMillis;
+        }
+    }
 
     private <K> int countWithin(ConcurrentHashMap<K, Deque<Long>> map, K key, long now) {
         Deque<Long> deque = map.get(key);

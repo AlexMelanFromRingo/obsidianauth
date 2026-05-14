@@ -2,6 +2,9 @@ version: 2
 # The constitution mandates exact-pinned dependencies and a CVE-scan policy. Dependabot
 # fits that: it proposes PRs that bump the exact pin (never introduces a range), and
 # surfaces security advisories for the pinned versions.
+#
+# Updates are GROUPED — one consolidated PR per ecosystem per run, instead of one PR per
+# dependency — to keep the branch/PR list quiet on a small project.
 updates:
   - package-ecosystem: gradle
     directory: /
@@ -11,11 +14,18 @@ updates:
     labels: [dependencies]
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      gradle-dependencies:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 5
     labels: [dependencies, ci]
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns: ["*"]

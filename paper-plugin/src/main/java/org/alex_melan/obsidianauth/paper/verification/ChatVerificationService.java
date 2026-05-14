@@ -209,8 +209,14 @@ public final class ChatVerificationService {
                     "Incorrect code. Try again.", NamedTextColor.RED));
             case LOCKED_OUT -> {
                 session.setState(PaperSession.State.LOCKED_OUT);
+                long retryAtMillis = rateLimiter.retryAtMillis(player.getUniqueId(), extractIp(player));
+                long waitSeconds = Math.max(0L,
+                        (retryAtMillis - System.currentTimeMillis() + 999L) / 1000L);
+                String when = (waitSeconds <= 0L)
+                        ? "Try again shortly."
+                        : "Try again in ~" + formatWait(waitSeconds) + ".";
                 player.kick(Component.text(
-                        "Too many failed 2FA attempts. Try again later.", NamedTextColor.RED));
+                        "Too many failed 2FA attempts. " + when, NamedTextColor.RED));
             }
             case NO_ENROLLMENT -> player.sendMessage(Component.text(
                     "No 2FA enrollment found. Rejoin to set up.", NamedTextColor.RED));
@@ -226,5 +232,13 @@ public final class ChatVerificationService {
             return new byte[] {0, 0, 0, 0};
         }
         return addr.getAddress().getAddress();
+    }
+
+    /** Formats a wait duration for the lockout kick message — e.g. {@code "45s"} or {@code "3m 20s"}. */
+    private static String formatWait(long totalSeconds) {
+        if (totalSeconds < 60L) {
+            return totalSeconds + "s";
+        }
+        return (totalSeconds / 60L) + "m " + (totalSeconds % 60L) + "s";
     }
 }
