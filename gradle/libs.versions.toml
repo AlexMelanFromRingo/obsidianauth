@@ -17,7 +17,7 @@ mysql-connector    = "8.4.0"
 slf4j-api          = "2.0.13"
 
 # TOML parser for the Velocity-side config file. NightConfig is small (~200 KB) and BSD-licensed.
-nightconfig        = "3.8.1"
+nightconfig        = "3.8.4"
 
 # Test libraries
 junit-bom          = "5.10.3"
