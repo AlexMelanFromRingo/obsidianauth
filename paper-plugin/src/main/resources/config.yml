@@ -1,0 +1,64 @@
+# ============================================================================
+#  ObsidianAuth — Paper-side configuration
+# ============================================================================
+#  See contracts/config-schema.md in the source tree for the authoritative spec.
+#  Any value outside its documented range causes the plugin to refuse to enable.
+# ============================================================================
+
+# --- TOTP parameters (RFC 6238) -------------------------------------------------
+totp:
+  digits: 6                  # allowed: 6 or 8
+  step_seconds: 30           # locked to 30 by RFC 6238
+  window_steps: 1            # allowed: 0..3 (each step = 30 s of drift tolerance)
+  algorithm: "SHA1"          # allowed: SHA1 or SHA256
+
+issuer:
+  name: "Minecraft"          # CHANGE THIS — appears in the authenticator app entry
+  account_label: "{username}"
+
+# --- Encryption (AES-GCM-256) ---------------------------------------------------
+#  Precedence is hard-coded as KMS > key file > env var. Configure exactly one
+#  source; lower-precedence sources are silently ignored when a higher one resolves.
+encryption:
+  kms:
+    reference: ""            # e.g. "aws-kms:arn:aws:kms:eu-west-1:111122223333:key/..."
+  file:
+    path: ""                 # e.g. "/etc/obsidianauth/master.key" (mode 0600, server-user owned)
+  env:
+    variable: "OBSIDIANAUTH_MASTER_KEY"   # base64-encoded 32 bytes
+
+# --- Storage --------------------------------------------------------------------
+storage:
+  backend: "sqlite"          # "sqlite" or "mysql"
+  sqlite:
+    file: "plugins/ObsidianAuth/data.db"
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    database: "obsidianauth"
+    user: "obsidianauth_app"
+    password_source: "env:OBSIDIANAUTH_DB_PASSWORD"   # MUST start with env: or file:
+    pool_max_connections: 4
+
+# --- Rate limiting --------------------------------------------------------------
+rate_limit:
+  max_failures_per_window: 5
+  window_seconds: 300
+  kick_on_lockout: true
+
+# --- Admin permission nodes -----------------------------------------------------
+permissions:
+  reset_node: "totp.admin.reset"
+  migrate_keys_node: "totp.admin.migrate-keys"
+  reload_node: "totp.admin.reload"
+
+# --- Audit log ------------------------------------------------------------------
+audit:
+  file: "plugins/ObsidianAuth/audit.log"
+
+# --- Proxy channel (alex_melan:obsidianauth/v1) ---------------------------------
+#  Set enabled=false in Paper-only deployments.
+proxy_channel:
+  enabled: true
+  hmac_secret_source: "env:OBSIDIANAUTH_CHANNEL_HMAC"
+  response_timeout_ms: 3000

@@ -1,3 +1,7 @@
+> **Chosen**: **ObsidianAuth** (constitution v1.0.1, 2026-05-14). Rationale recorded in the Sync Impact Report at the top of `.specify/memory/constitution.md` and in `README.md`. The brainstorm below is kept for posterity.
+
+---
+
 О, классная тема 👍
 Давай подберём название так, чтобы было **понятно**, **запоминалось** и звучало по-майнкрафтовски.
 

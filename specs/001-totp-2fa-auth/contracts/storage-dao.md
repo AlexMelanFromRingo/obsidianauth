@@ -1,6 +1,6 @@
 # Contract — Storage DAO
 
-**Location**: `core/src/main/java/org/alex_melan/totp/core/storage/`.
+**Location**: `core/src/main/java/org/alex_melan/obsidianauth/core/storage/`.
 **Consumer**: Paper-side `EnrollmentService` and `AuditService`. Velocity does not consume this contract (FR-007a / FR-007b).
 
 The DAO surface is deliberately narrow: the plugin makes ≤ 4 distinct queries against the DB on the hot path. The interfaces hide the SQLite-vs-MySQL split via the `Dialect` enum and Flyway-templated migrations.

@@ -1,0 +1,18 @@
+[proxy_channel]
+# Set enabled=false for proxies that do not run the ObsidianAuth Paper plugin
+# on any backend. Disabled = pass-through, no auth-state awareness.
+enabled = true
+hmac_secret_source = "env:OBSIDIANAUTH_CHANNEL_HMAC"
+response_timeout_ms = 3000
+
+[lockdown]
+# When a backend reports a player is PENDING / LOCKED_OUT, these are blocked
+# at the proxy layer too:
+block_chat = true
+block_commands = true
+
+# When no backend with the auth plugin is reachable:
+fail_closed_routing = true
+
+[logging]
+level = "INFO"

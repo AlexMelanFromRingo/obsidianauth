@@ -1,0 +1,29 @@
+name: ObsidianAuth
+version: '1.0.0-SNAPSHOT'
+main: org.alex_melan.obsidianauth.paper.ObsidianAuthPaperPlugin
+api-version: '1.20'
+authors: [AlexMelan]
+description: 'Security-first TOTP 2FA (RFC 6238). Paper-authoritative; Folia-aware. Source: https://github.com/AlexMelanFromRingo/'
+website: 'https://github.com/AlexMelanFromRingo/'
+folia-supported: true
+
+commands:
+  2fa-admin:
+    description: 'Administrative commands for ObsidianAuth TOTP 2FA.'
+    usage: '/<command> <reset|migrate-keys|migrate-cancel|reload> [args]'
+    aliases: [obsidianauth, obsidian-auth]
+
+  totp:
+    description: 'Fallback chat-disabled auth submission path.'
+    usage: '/<command> <code>'
+
+permissions:
+  totp.admin.reset:
+    description: 'Permission to reset another player''s 2FA enrollment.'
+    default: op
+  totp.admin.migrate-keys:
+    description: 'Permission to run eager batch key-rotation migration.'
+    default: op
+  totp.admin.reload:
+    description: 'Permission to reload the ObsidianAuth configuration.'
+    default: op

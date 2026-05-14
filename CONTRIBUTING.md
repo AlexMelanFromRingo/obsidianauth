@@ -87,7 +87,7 @@ The JARs land in `paper-plugin/build/libs/` and `velocity-plugin/build/libs/`. F
 ## Code style
 
 - Java 17, with `--enable-preview` disabled (we use only stable features).
-- Package layout: `org.alex_melan.totp.{core|paper|velocity}.<sub>`.
+- Package layout: `org.alex_melan.obsidianauth.{core|paper|velocity}.<sub>`.
 - 4-space indentation. No tabs. UTF-8. LF line endings.
 - One public type per file. No god-classes.
 - `final` everywhere except where a non-final field is genuinely needed.

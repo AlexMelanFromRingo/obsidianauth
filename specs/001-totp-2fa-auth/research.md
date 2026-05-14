@@ -1,4 +1,4 @@
-# Phase 0 Research — TOTP 2FA Plugin
+# Phase 0 Research — ObsidianAuth
 
 **Feature**: 001-totp-2fa-auth | **Date**: 2026-05-13
 
@@ -18,7 +18,7 @@ This document resolves the open technology and pattern choices listed in `plan.m
 
 - **Decision**: **HikariCP 5.x** for connection pooling, **Flyway Core 10.x** for migrations, with **per-module driver dependencies** (SQLite + MySQL Connector/J shipped in `paper-plugin` only; Velocity does not need DB access per FR-007a).
 - **Rationale**:
-  - HikariCP is the de-facto JVM connection pool; minimal footprint (~150 KB) and shaded under `org.alex_melan.totp.shaded.hikari` to avoid clashes with other plugins.
+  - HikariCP is the de-facto JVM connection pool; minimal footprint (~150 KB) and shaded under `org.alex_melan.obsidianauth.shaded.hikari` to avoid clashes with other plugins.
   - Flyway 10.x Core is Apache 2 licensed (the BSL-licensed components are in `flyway-commercial`); the `flyway-database-sqlite` community module is also Apache 2.
   - Migrations live under `core/src/main/resources/db/migration/V1__init.sql` etc., so a single migration set serves both backends. Dialect differences (e.g., `INTEGER PRIMARY KEY AUTOINCREMENT` vs `BIGINT AUTO_INCREMENT`) are handled by the `Dialect` enum in `core/storage/` and parameterized Flyway placeholders (`${pk_type}`).
 - **Alternatives considered**:
@@ -28,7 +28,7 @@ This document resolves the open technology and pattern choices listed in `plan.m
 
 ## R-3: Plugin-message channel wire format
 
-- **Decision**: **Custom length-prefixed binary frames** sent over Velocity's `RegisteredChannel` (`alex_melan:totp/v1`) and Paper's `Messenger.registerOutgoingPluginChannel` / `PluginMessageListener` of the same channel name. Each frame is **HMAC-SHA256-authenticated** with a shared secret resolved through the same `KMS > key file > env` precedence as the AES master key.
+- **Decision**: **Custom length-prefixed binary frames** sent over Velocity's `RegisteredChannel` (`alex_melan:obsidianauth/v1`) and Paper's `Messenger.registerOutgoingPluginChannel` / `PluginMessageListener` of the same channel name. Each frame is **HMAC-SHA256-authenticated** with a shared secret resolved through the same `KMS > key file > env` precedence as the AES master key.
 - **Frame layout** (see `contracts/plugin-message-channel.md` for the authoritative spec):
 
   ```text
@@ -63,7 +63,7 @@ This document resolves the open technology and pattern choices listed in `plan.m
 
 ## R-5: Crash-resistant stash file format and fsync strategy
 
-- **Decision**: **One file per player** under `plugins/TotpAuth/stash/{uuid}.stash`, written with the following protocol:
+- **Decision**: **One file per player** under `plugins/ObsidianAuth/stash/{uuid}.stash`, written with the following protocol:
   1. Write to a temp file `{uuid}.stash.tmp` with body: `magic(4) || version(1) || slot_index(1) || itemstack_length(4 BE) || itemstack_bytes(N) || crc32(4)`.
   2. `FileChannel.force(true)` on the temp file (forces both data + metadata to disk).
   3. `Files.move(tmpPath, finalPath, ATOMIC_MOVE, REPLACE_EXISTING)`.
@@ -77,7 +77,7 @@ This document resolves the open technology and pattern choices listed in `plan.m
 
 ## R-6: Tamper-evident audit log
 
-- **Decision**: **Append-only file `plugins/TotpAuth/audit.log` plus a parallel hash chain row in DB**.
+- **Decision**: **Append-only file `plugins/ObsidianAuth/audit.log` plus a parallel hash chain row in DB**.
   - File format: one line per event, JSON-Lines, with fields `{ts, event, actor_uuid, target_uuid, outcome, prev_hash, this_hash}`.
   - `this_hash = SHA-256(prev_hash || canonical_json(event_fields_without_hashes))`.
   - DB shadow table `audit_hash(seq, ts, this_hash, file_offset)` holds the head pointer for fast tamper detection on restart.

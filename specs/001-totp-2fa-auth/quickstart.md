@@ -1,6 +1,6 @@
-# Quickstart — TOTP 2FA Plugin
+# Quickstart — ObsidianAuth
 
-Operator-facing guide. Follows the v1.0.0 release of the plugin (Paper 1.20.1 + Velocity 3.3.x).
+Operator-facing guide. Follows the v1.0.0 release of **ObsidianAuth** (TOTP 2FA for Paper 1.20.1 + Velocity 3.3.x).
 
 ---
 
@@ -19,7 +19,7 @@ Operator-facing guide. Follows the v1.0.0 release of the plugin (Paper 1.20.1 + 
    - `totp-velocity-plugin-1.0.0.jar` (only if you run a proxy)
 2. Drop the Paper JAR into your backend's `plugins/` folder.
 3. (Optional) Drop the Velocity JAR into your proxy's `plugins/` folder.
-4. Start the Paper server **once** to let it write a default `plugins/TotpAuth/config.yml`. Stop the server.
+4. Start the Paper server **once** to let it write a default `plugins/ObsidianAuth/config.yml`. Stop the server.
 5. Generate a master AES key (32 random bytes, base64-encoded):
 
    ```bash
@@ -28,7 +28,7 @@ Operator-facing guide. Follows the v1.0.0 release of the plugin (Paper 1.20.1 + 
    chown <server-user>:<server-user> /etc/totp-plugin/master.key
    ```
 
-   Then point the plugin at it by editing `plugins/TotpAuth/config.yml`:
+   Then point the plugin at it by editing `plugins/ObsidianAuth/config.yml`:
 
    ```yaml
    encryption:
@@ -45,8 +45,8 @@ Operator-facing guide. Follows the v1.0.0 release of the plugin (Paper 1.20.1 + 
    (Persist it in your systemd unit / launcher script — do **not** commit it.)
 
 7. Edit `issuer.name` in `config.yml` to your server's brand name (e.g. `"ExampleNet"`). This is what players will see in their authenticator app.
-8. Start the Paper server. You should see `[TotpAuth] Loaded. Encryption key resolved from FILE; key_version=1.` in the log.
-9. (If using a proxy) Start the Velocity proxy. You should see `[TotpAuth-Velocity] Channel alex_melan:totp/v1 registered.`
+8. Start the Paper server. You should see `[ObsidianAuth] Loaded. Encryption key resolved from FILE; key_version=1.` in the log.
+9. (If using a proxy) Start the Velocity proxy. You should see `[ObsidianAuth-Velocity] Channel alex_melan:obsidianauth/v1 registered.`
 
 ---
 
@@ -81,14 +81,14 @@ In a separate session (don't authenticate yet), confirm that **every one of thes
 
 1. Join with an account whose inventory is full (use `/fill` or a creative donor account beforehand).
 2. Confirm the QR card appears in your currently-selected hotbar slot.
-3. Confirm `plugins/TotpAuth/stash/{your_uuid}.stash` exists during enrollment.
+3. Confirm `plugins/ObsidianAuth/stash/{your_uuid}.stash` exists during enrollment.
 4. Authenticate. Confirm the original item is back in its slot, every other inventory slot is unchanged, and the stash file is gone.
 
 ### 3.4 Admin reset
 
 1. As a console-or-op user: `/2fa-admin reset <player>`.
-2. Confirm the row in `enrollment` is gone (`sqlite3 plugins/TotpAuth/data.db "SELECT * FROM enrollment WHERE player_uuid = ...;"`).
-3. Confirm an `ADMIN_RESET` line appears at the end of `plugins/TotpAuth/audit.log`.
+2. Confirm the row in `enrollment` is gone (`sqlite3 plugins/ObsidianAuth/data.db "SELECT * FROM enrollment WHERE player_uuid = ...;"`).
+3. Confirm an `ADMIN_RESET` line appears at the end of `plugins/ObsidianAuth/audit.log`.
 4. Have the affected player rejoin — they should see the enrollment flow again.
 
 ### 3.5 Crash recovery (manual)
@@ -121,7 +121,7 @@ See `contracts/config-schema.md` for the full schema. The settings you'll touch 
 - **Keep the master key out of backups** that aren't themselves encrypted. The plugin's secret-at-rest guarantee assumes the key is held separately from the database.
 - **Rotate the master key** by writing a new `master.key` (the plugin will assign it `key_version = N+1` on next start) and either letting traffic migrate records lazily (default, FR-017a) or running `/2fa-admin migrate-keys` to force eager migration. **Don't delete the old key file until you've confirmed every record has migrated** (run `/2fa-admin migrate-keys` and check that the "remaining: 0" line appears).
 - **Run NTP** on your server host. The plugin's ±N-step window only compensates for *client* drift — server drift is your responsibility.
-- **Audit log integrity**: at server startup, the plugin compares the DB-shadow head against the audit-log tail. If you see `[TotpAuth] AUDIT TAMPER DETECTED — head mismatch` in the log, treat it as a security incident.
+- **Audit log integrity**: at server startup, the plugin compares the DB-shadow head against the audit-log tail. If you see `[ObsidianAuth] AUDIT TAMPER DETECTED — head mismatch` in the log, treat it as a security incident.
 
 ---
 

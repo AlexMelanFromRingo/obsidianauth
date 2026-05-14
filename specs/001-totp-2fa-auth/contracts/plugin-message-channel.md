@@ -1,7 +1,9 @@
-# Contract — Plugin-Message Channel `alex_melan:totp/v1`
+# Contract — Plugin-Message Channel `alex_melan:obsidianauth/v1`
+
+Channel name reflects the project brand **ObsidianAuth**, namespaced under the canonical `alex_melan` prefix per Constitution Principle V.
 
 **Direction**: Bidirectional between Velocity (proxy) and Paper (backend).
-**Transport**: Velocity `ChannelRegistrar` registers `alex_melan:totp/v1`; Paper `Messenger` registers the same identifier as both incoming and outgoing. Both sides exchange raw `byte[]` per message.
+**Transport**: Velocity `ChannelRegistrar` registers `alex_melan:obsidianauth/v1`; Paper `Messenger` registers the same identifier as both incoming and outgoing. Both sides exchange raw `byte[]` per message.
 **Confidentiality**: None — the channel travels over the same TCP socket as the player session; assume an attacker can read it on shared/cloud hosting.
 **Integrity**: HMAC-SHA256 of the entire body, computed under a shared secret resolved through `KMS > key file > env` precedence (same chain as the AES master key, but a **distinct** secret).
 **Failure mode**: Any frame that fails magic check, version check, length check, or HMAC verification is silently dropped on the receiver and audit-logged on Paper as `CHANNEL_HMAC_FAIL` (FR-026).

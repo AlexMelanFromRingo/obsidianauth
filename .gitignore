@@ -1,0 +1,41 @@
+# --- Gradle / Java build outputs ---
+.gradle/
+build/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+target/
+
+# --- IDE state ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+
+# --- OS detritus ---
+.DS_Store
+Thumbs.db
+
+# --- Logs and temp files ---
+*.log
+*.tmp
+*.swp
+*~
+
+# --- Plugin runtime state (would only appear if you test in-tree) ---
+plugins/ObsidianAuth/data.db
+plugins/ObsidianAuth/audit.log
+plugins/ObsidianAuth/stash/
+
+# --- Operator secrets — never under any circumstance commit these ---
+*.key
+master.key
+*.pem
+.env
+.env.*

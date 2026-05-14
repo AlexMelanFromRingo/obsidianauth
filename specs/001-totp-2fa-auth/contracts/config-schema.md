@@ -4,7 +4,7 @@ Two configuration files exist. Each side validates only its own file at plugin e
 
 ---
 
-## Paper: `plugins/TotpAuth/config.yml`
+## Paper: `plugins/ObsidianAuth/config.yml`
 
 See `data-model.md §"Server Configuration (Paper YAML)"` for the full YAML body. This contract restates the validation rules so reviewers can audit them in one place.
 
@@ -20,7 +20,7 @@ See `data-model.md §"Server Configuration (Paper YAML)"` for the full YAML body
 | `encryption.file.path` | string | no | existing regular file, mode ≤ `0600`, owner == process user | none | refuse start |
 | `encryption.env.variable` | string | no | non-empty | `"TOTP_MASTER_KEY"` | refuse start if env source is the resolved chain and var is unset |
 | `storage.backend` | string | yes | `{"sqlite", "mysql"}` | `"sqlite"` | refuse start |
-| `storage.sqlite.file` | string | conditional | non-empty path | `"plugins/TotpAuth/data.db"` | refuse start |
+| `storage.sqlite.file` | string | conditional | non-empty path | `"plugins/ObsidianAuth/data.db"` | refuse start |
 | `storage.mysql.host` | string | conditional | non-empty | `"127.0.0.1"` | refuse start |
 | `storage.mysql.port` | int | conditional | `[1, 65535]` | `3306` | refuse start |
 | `storage.mysql.database` | string | conditional | non-empty | `"totp"` | refuse start |
@@ -32,7 +32,7 @@ See `data-model.md §"Server Configuration (Paper YAML)"` for the full YAML body
 | `rate_limit.kick_on_lockout` | bool | yes | `{true, false}` | `true` | refuse start |
 | `permissions.reset_node` | string | yes | matches `^[a-z][a-z0-9_.-]*$` | `"totp.admin.reset"` | refuse start |
 | `permissions.migrate_keys_node` | string | yes | matches `^[a-z][a-z0-9_.-]*$` | `"totp.admin.migrate-keys"` | refuse start |
-| `audit.file` | string | yes | parent directory writable | `"plugins/TotpAuth/audit.log"` | refuse start |
+| `audit.file` | string | yes | parent directory writable | `"plugins/ObsidianAuth/audit.log"` | refuse start |
 | `proxy_channel.enabled` | bool | yes | `{true, false}` | `true` | refuse start |
 | `proxy_channel.hmac_secret_source` | string | when enabled | resolves to ≥ 32 random bytes | `"env:TOTP_CHANNEL_HMAC"` | refuse start |
 | `proxy_channel.response_timeout_ms` | int | when enabled | `[100, 30000]` | `3000` | refuse start |
@@ -40,11 +40,11 @@ See `data-model.md §"Server Configuration (Paper YAML)"` for the full YAML body
 Additional cross-field validations:
 - Exactly one of `encryption.kms.reference`, `encryption.file.path`, or `encryption.env.variable` MUST resolve to a usable key. If all three are configured, precedence per FR-019 applies and the lower-priority sources are ignored (logged at INFO).
 - When `storage.backend = "sqlite"`, the `storage.mysql.*` fields are still validated for shape (so misconfigurations don't lurk silently waiting for a backend switch).
-- When `proxy_channel.enabled = false`, Velocity-side messages received on `alex_melan:totp/v1` are silently dropped and audit-logged once per minute as `CHANNEL_HMAC_FAIL` (since they cannot be verified).
+- When `proxy_channel.enabled = false`, Velocity-side messages received on `alex_melan:obsidianauth/v1` are silently dropped and audit-logged once per minute as `CHANNEL_HMAC_FAIL` (since they cannot be verified).
 
 ---
 
-## Velocity: `plugins/totp/velocity.toml`
+## Velocity: `plugins/obsidianauth/velocity.toml`
 
 | Path | Type | Required | Allowed / range | Default | On failure |
 |------|------|----------|-----------------|---------|------------|

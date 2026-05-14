@@ -13,11 +13,11 @@ Concrete schema for every entity in `spec.md §"Key Entities"`. Column types are
 | Player Enrollment Record | Yes | DB table `enrollment` |
 | Authentication Session State (Paper) | No — in-memory | `SessionRegistry` |
 | Authentication Session State (Velocity) | No — in-memory | `VelocitySession` map |
-| Stashed Item Record | Yes — file | `plugins/TotpAuth/stash/{uuid}.stash` |
+| Stashed Item Record | Yes — file | `plugins/ObsidianAuth/stash/{uuid}.stash` |
 | TOTP Card Item | No — runtime ItemStack | n/a |
-| Audit Log Entry | Yes — append-only file + DB head | `plugins/TotpAuth/audit.log` + table `audit_head` |
-| Proxy↔Backend Channel Message | No — wire only | `alex_melan:totp/v1` |
-| Server Configuration | Yes — file | `plugins/TotpAuth/config.yml` (Paper), `plugins/totp/velocity.toml` (Velocity) |
+| Audit Log Entry | Yes — append-only file + DB head | `plugins/ObsidianAuth/audit.log` + table `audit_head` |
+| Proxy↔Backend Channel Message | No — wire only | `alex_melan:obsidianauth/v1` |
+| Server Configuration | Yes — file | `plugins/ObsidianAuth/config.yml` (Paper), `plugins/obsidianauth/velocity.toml` (Velocity) |
 
 ---
 
@@ -153,7 +153,7 @@ Velocity has no main thread, so all `VelocitySession` mutations happen on the pr
 
 ## File entity: `Stashed Item Record`
 
-Per-player file at `plugins/TotpAuth/stash/{uuid}.stash`.
+Per-player file at `plugins/ObsidianAuth/stash/{uuid}.stash`.
 
 Binary layout (all multi-byte fields big-endian):
 
@@ -185,7 +185,7 @@ Read protocol:
 
 ## File entity: `Audit Log Entry`
 
-One JSON-Lines record per security-relevant event at `plugins/TotpAuth/audit.log`. UTF-8, line-terminated by `\n`. Per FR-018, no secrets/codes are written.
+One JSON-Lines record per security-relevant event at `plugins/ObsidianAuth/audit.log`. UTF-8, line-terminated by `\n`. Per FR-018, no secrets/codes are written.
 
 ```jsonc
 {
@@ -211,7 +211,7 @@ Genesis entry (`seq=1`) has `prev_hash` = `"0".repeat(64)`.
 
 ## File entity: `Server Configuration` (Paper YAML)
 
-`plugins/TotpAuth/config.yml`. Loaded once at plugin enable; reload supported via `/2fa-admin reload`.
+`plugins/ObsidianAuth/config.yml`. Loaded once at plugin enable; reload supported via `/2fa-admin reload`.
 
 ```yaml
 # === TOTP parameters ===
@@ -239,7 +239,7 @@ encryption:
 storage:
   backend: "sqlite"                                # one of {"sqlite", "mysql"}
   sqlite:
-    file: "plugins/TotpAuth/data.db"
+    file: "plugins/ObsidianAuth/data.db"
   mysql:
     host: "127.0.0.1"
     port: 3306
@@ -261,7 +261,7 @@ permissions:
 
 # === Audit log ===
 audit:
-  file: "plugins/TotpAuth/audit.log"
+  file: "plugins/ObsidianAuth/audit.log"
 
 # === Proxy channel ===
 proxy_channel:
@@ -287,7 +287,7 @@ Validation rules (enforced by `ConfigValidator`, refusal on any failure per FR-0
 
 ## File entity: `Server Configuration` (Velocity TOML)
 
-`plugins/totp/velocity.toml`. Smaller — Velocity needs only enough to talk to Paper.
+`plugins/obsidianauth/velocity.toml`. Smaller — Velocity needs only enough to talk to Paper.
 
 ```toml
 [proxy_channel]

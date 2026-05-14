@@ -1,6 +1,8 @@
-# TOTP 2FA Plugin for Paper 1.20.1 + Velocity
+# ObsidianAuth — TOTP 2FA for Paper 1.20.1 + Velocity
 
-A security-first **TOTP** (RFC 6238) two-factor-authentication plugin pair for Minecraft. Paper plugin enforces in-world lockdown; Velocity plugin gates chat/command/routing at the proxy. Built as a multi-module Java 17 Gradle project under the canonical base package **`org.alex_melan`**.
+A security-first **TOTP** (RFC 6238) two-factor-authentication plugin pair for Minecraft. Paper plugin enforces in-world lockdown; Velocity plugin gates chat/command/routing at the proxy. Built as a multi-module Java 17 Gradle project under the canonical base package **`org.alex_melan.obsidianauth`**.
+
+> **Name origin**: obsidian is the only standard survival-mode block that resists TNT/creeper blasts, and it forms the frame of nether portals, the base of beacons, and the shell of ender chests — gated access, authority, and private encrypted storage. The behaviour of this plugin maps onto those four meanings directly.
 
 > **Canonical repository**: [`https://github.com/AlexMelanFromRingo/`](https://github.com/AlexMelanFromRingo/) — release artifacts published elsewhere (Modrinth, Hangar, etc.) must point back to this origin as the source of truth.
 
@@ -51,7 +53,7 @@ See [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart
 
 1. Drop `totp-paper-plugin-*.jar` into your backend's `plugins/`.
 2. (Optional) Drop `totp-velocity-plugin-*.jar` into your proxy's `plugins/`.
-3. Generate a 32-byte AES master key and reference it from `plugins/TotpAuth/config.yml` under `encryption.file.path` (mode `0600`, owned by the server user).
+3. Generate a 32-byte AES master key and reference it from `plugins/ObsidianAuth/config.yml` under `encryption.file.path` (mode `0600`, owned by the server user).
 4. Generate a 32-byte HMAC secret and export it as `TOTP_CHANNEL_HMAC` on **both** sides.
 5. Set `issuer.name` in `config.yml` to your server brand.
 6. Start the Paper server, then the Velocity proxy.

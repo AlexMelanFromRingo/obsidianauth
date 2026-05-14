@@ -8,6 +8,7 @@ for what is *allowed*; the plan is the source of truth for what is *built*.
 When the two appear to conflict, the constitution wins and the plan must be
 updated.
 
+Project brand: **ObsidianAuth** (chosen 2026-05-14; constitution v1.0.1).
 Canonical repository: https://github.com/AlexMelanFromRingo/
-Base Java package for all modules: `org.alex_melan`
+Base Java package for all modules: `org.alex_melan.obsidianauth`
 <!-- SPECKIT END -->

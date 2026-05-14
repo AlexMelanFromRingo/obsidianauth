@@ -1,11 +1,11 @@
-# Implementation Plan: TOTP-Based 2FA Authentication for Minecraft (Paper 1.20.1 + Velocity)
+# Implementation Plan: ObsidianAuth — TOTP 2FA for Minecraft (Paper 1.20.1 + Velocity)
 
 **Branch**: `001-totp-2fa-auth` | **Date**: 2026-05-13 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/001-totp-2fa-auth/spec.md`
 
 ## Summary
 
-Build a security-first, RFC 6238 TOTP 2FA plugin pair for Paper 1.20.1 + Velocity, structured as a multi-module Gradle project under `org.alex_melan` with reusable `core` library and platform plugins (`paper-plugin`, `velocity-plugin`). The Paper module is authoritative for verification, storage, and in-world lockdown; Velocity is a thin helper that gates chat/command/routing at the proxy layer. Secrets are sealed with AES-GCM-256 (AAD = `player_uuid ‖ key_version`); the master key resolves through KMS > key file > env var. Persistence is via JDBC over a thin DAO with SQLite (default, single-server) and MySQL (shared) drivers. QR codes are rendered through ZXing and painted onto a Paper `MapCanvas`; the card item is delivered via slot-borrow with a crash-resistant on-disk stash.
+Build **ObsidianAuth**, a security-first, RFC 6238 TOTP 2FA plugin pair for Paper 1.20.1 + Velocity, structured as a multi-module Gradle project under `org.alex_melan.obsidianauth` with reusable `core` library and platform plugins (`paper-plugin`, `velocity-plugin`). The Paper module is authoritative for verification, storage, and in-world lockdown; Velocity is a thin helper that gates chat/command/routing at the proxy layer. Secrets are sealed with AES-GCM-256 (AAD = `player_uuid ‖ key_version`); the master key resolves through KMS > key file > env var. Persistence is via JDBC over a thin DAO with SQLite (default, single-server) and MySQL (shared) drivers. QR codes are rendered through ZXing and painted onto a Paper `MapCanvas`; the card item is delivered via slot-borrow with a crash-resistant on-disk stash.
 
 ## Technical Context
 
@@ -49,7 +49,7 @@ Result-continuation back to the main / region thread uses the platform's *sync* 
 - **Main / region thread MUST NOT block** on I/O, JDBC, file system writes, fsync, AES, HMAC, or any other operation whose worst-case latency exceeds 1 ms (Concurrency Model above; reviewers MUST reject any PR introducing such a call).
 - AES key never on disk in plaintext unless via the operator-managed key-file source under enforced `0600` permissions (FR-019/019a).
 - Paper module never trusts Velocity for verification state (FR-007a); Velocity never sees ciphertext or AES keys (FR-007b).
-- The proxy↔backend channel `alex_melan:totp/v1` carries no secrets/codes/ciphertexts (FR-007c).
+- The proxy↔backend channel `alex_melan:obsidianauth/v1` carries no secrets/codes/ciphertexts (FR-007c).
 - Failure-closed everywhere (FR-008): indeterminate state ≡ unauthenticated. **Async tasks that have not yet returned a result are an "indeterminate" state by definition** — see the failure-closed rules per event class in §"Async-on-Cancellable-Event protocol" below.
 
 **Scale/Scope**: Target small-to-mid private/community Minecraft servers — 1 to ~500 enrolled accounts per backend, 1 to ~100 concurrent online players. Cross-server proxy session sharing is **out of MVP scope**; each backend independently authenticates the player.
@@ -98,7 +98,7 @@ Reconciling **non-blocking main thread** with **failure-closed event cancellatio
 
 This protocol is **the** approach for every listener; if a listener needs a *negative* decision based on async data (e.g., "cancel if DB says X"), the listener MUST cancel by default and only un-cancel by posting a *new* event-equivalent action from the main thread after the async result arrives. There is no fall-through to "not yet known ⇒ allow".
 
-For Velocity, the same principle holds with one wrinkle: `PlayerChatEvent` and `CommandExecuteEvent` on Velocity *do* support a built-in async result type (`EventTask.async`/`EventTask.resumeWhenComplete`). The Velocity-side helper uses these to send a `GATE_REQUEST` over `alex_melan:totp/v1`, await the `GATE_RESPONSE` (with the configured `response_timeout_ms`), and cancel the event if the response is `PENDING` / `LOCKED_OUT` / `UNKNOWN`. The proxy NEVER blocks its own event loop on the gate request — Velocity's `EventTask` system runs the await on an off-thread executor managed by the proxy.
+For Velocity, the same principle holds with one wrinkle: `PlayerChatEvent` and `CommandExecuteEvent` on Velocity *do* support a built-in async result type (`EventTask.async`/`EventTask.resumeWhenComplete`). The Velocity-side helper uses these to send a `GATE_REQUEST` over `alex_melan:obsidianauth/v1`, await the `GATE_RESPONSE` (with the configured `response_timeout_ms`), and cancel the event if the response is `PENDING` / `LOCKED_OUT` / `UNKNOWN`. The proxy NEVER blocks its own event loop on the gate request — Velocity's `EventTask` system runs the await on an off-thread executor managed by the proxy.
 
 ## Project Structure
 
@@ -112,7 +112,7 @@ specs/001-totp-2fa-auth/
 ├── data-model.md                                # Phase 1 output
 ├── quickstart.md                                # Phase 1 output (operator install guide)
 ├── contracts/
-│   ├── plugin-message-channel.md                # alex_melan:totp/v1 wire format
+│   ├── plugin-message-channel.md                # alex_melan:obsidianauth/v1 wire format
 │   ├── storage-dao.md                           # JDBC abstraction interface
 │   ├── config-schema.md                         # plugin config (Paper YAML, Velocity TOML)
 │   └── commands.md                              # /2fa-admin command surface
@@ -136,7 +136,7 @@ totp-plugin/                                     # repo root
 ├── core/
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── main/java/org/alex_melan/totp/core/
+│       ├── main/java/org/alex_melan/obsidianauth/core/
 │       │   ├── async/                           # platform-agnostic async dispatch
 │       │   │   ├── AsyncExecutor.java           # interface: submit(Runnable) / submit(Supplier<T>) → CompletableFuture<T>
 │       │   │   ├── SyncExecutor.java            # interface: postToMainThread(Runnable)
@@ -169,7 +169,7 @@ totp-plugin/                                     # repo root
 │       │   ├── ratelimit/                       # per-account + per-IP token bucket
 │       │   │   └── AttemptLimiter.java          # state is in-memory ConcurrentHashMap; fast on main thread
 │       │   ├── channel/                         # proxy↔backend message codec
-│       │   │   ├── ChannelId.java               # constant: "alex_melan:totp/v1"
+│       │   │   ├── ChannelId.java               # constant: "alex_melan:obsidianauth/v1"
 │       │   │   ├── ChannelMessage.java
 │       │   │   ├── ChannelCodec.java            # encode/decode + HMAC verify on AsyncExecutor
 │       │   │   └── messages/
@@ -183,12 +183,12 @@ totp-plugin/                                     # repo root
 │       │   └── db/migration/
 │       │       ├── V1__init.sql
 │       │       └── V2__rate_limit_index.sql
-│       └── test/java/org/alex_melan/totp/core/   # JUnit 5 tests for crypto, TOTP, codec, DAO contracts
+│       └── test/java/org/alex_melan/obsidianauth/core/   # JUnit 5 tests for crypto, TOTP, codec, DAO contracts
 ├── paper-plugin/
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── main/java/org/alex_melan/totp/paper/
-│       │   ├── TotpPaperPlugin.java             # JavaPlugin entry; wires services; detects Folia at enable
+│       ├── main/java/org/alex_melan/obsidianauth/paper/
+│       │   ├── ObsidianAuthPaperPlugin.java             # JavaPlugin entry; wires services; detects Folia at enable
 │       │   ├── async/                           # platform adapter for AsyncExecutor / SyncExecutor
 │       │   │   ├── BukkitAsyncExecutor.java     # uses Bukkit.getScheduler().runTaskAsynchronously
 │       │   │   ├── FoliaAsyncExecutor.java      # uses plugin.getServer().getAsyncScheduler().runNow
@@ -216,19 +216,19 @@ totp-plugin/                                     # repo root
 │       │   ├── command/
 │       │   │   ├── TwoFaAdminCommand.java       # /2fa-admin reset|migrate-keys
 │       │   │   └── Permissions.java
-│       │   ├── channel/                         # PluginMessageListener for alex_melan:totp/v1
+│       │   ├── channel/                         # PluginMessageListener for alex_melan:obsidianauth/v1
 │       │   │   └── PaperChannelHandler.java
 │       │   └── config/                          # YAML loader + validation
 │       │       └── PaperConfigLoader.java
 │       ├── main/resources/
 │       │   ├── plugin.yml                       # Paper plugin manifest
 │       │   └── config.yml                       # default config (issuer, code length, window, etc.)
-│       └── test/java/org/alex_melan/totp/paper/  # MockBukkit-backed integration tests
+│       └── test/java/org/alex_melan/obsidianauth/paper/  # MockBukkit-backed integration tests
 ├── velocity-plugin/
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── main/java/org/alex_melan/totp/velocity/
-│       │   ├── TotpVelocityPlugin.java          # @Plugin entry; wires services
+│       ├── main/java/org/alex_melan/obsidianauth/velocity/
+│       │   ├── ObsidianAuthVelocityPlugin.java          # @Plugin entry; wires services
 │       │   ├── async/                           # platform adapter for AsyncExecutor / SyncExecutor
 │       │   │   ├── VelocityAsyncExecutor.java   # uses proxy.getScheduler().buildTask(...).schedule()
 │       │   │   └── VelocitySyncExecutor.java    # Velocity has no main thread; this is just the same async pool
@@ -247,7 +247,7 @@ totp-plugin/                                     # repo root
 └── .gitignore
 ```
 
-**Structure Decision**: **Multi-module Gradle build** with three modules (`core`, `paper-plugin`, `velocity-plugin`). The `core` module is a plain Java 17 library — it has no Paper or Velocity dependency and is independently unit-testable. Both plugin modules depend on `core` for crypto, TOTP, QR rendering, DAO interfaces, the channel codec, and the audit chain. Each plugin module shades only its strictly-required runtime deps (HikariCP, JDBC driver, ZXing core, Flyway) under a relocated package (`org.alex_melan.totp.shaded.*`) to avoid classpath collisions with other plugins on the same server.
+**Structure Decision**: **Multi-module Gradle build** with three modules (`core`, `paper-plugin`, `velocity-plugin`). The `core` module is a plain Java 17 library — it has no Paper or Velocity dependency and is independently unit-testable. Both plugin modules depend on `core` for crypto, TOTP, QR rendering, DAO interfaces, the channel codec, and the audit chain. Each plugin module shades only its strictly-required runtime deps (HikariCP, JDBC driver, ZXing core, Flyway) under a relocated package (`org.alex_melan.obsidianauth.shaded.*`) to avoid classpath collisions with other plugins on the same server.
 
 ### Module dependency graph
 
@@ -270,7 +270,7 @@ totp-plugin/                                     # repo root
    └──────────────────────┘             └──────────────────────┘
             │                                       │
             └─── plugin-message channel ────────────┘
-                  alex_melan:totp/v1
+                  alex_melan:obsidianauth/v1
                   HMAC-SHA256 authenticated
 ```
 
@@ -295,7 +295,7 @@ All eight are answered in `research.md` with Decision / Rationale / Alternatives
 
 Outputs:
 - [data-model.md](./data-model.md) — concrete schema for the five spec-level entities plus the two new helper entities (`Stashed Item Record`, `Proxy↔Backend Channel Message`), with column types, indices, and Flyway migration listing.
-- `contracts/plugin-message-channel.md` — byte-level wire format for the `alex_melan:totp/v1` channel, message-type IDs, HMAC scope, and replay-protection nonces.
+- `contracts/plugin-message-channel.md` — byte-level wire format for the `alex_melan:obsidianauth/v1` channel, message-type IDs, HMAC scope, and replay-protection nonces.
 - `contracts/storage-dao.md` — Java interfaces for `EnrollmentDao` and `AuditDao`, including the "lazy re-encrypt on access" contract from FR-017a.
 - `contracts/config-schema.md` — Paper YAML schema, Velocity TOML schema, validation rules, defaults, and the explicit forbidden-value list from FR-025.
 - `contracts/commands.md` — `/2fa-admin` subcommand grammar, permission node tree, audit-log shape per subcommand.
@@ -307,11 +307,11 @@ Re-evaluating after the design artifacts in `data-model.md` and `contracts/` are
 
 | Principle | Re-check | Notes |
 |-----------|----------|-------|
-| I. Security-First | PASS | Wire format for `alex_melan:totp/v1` (see `contracts/plugin-message-channel.md`) carries no secrets/codes; HMAC scope covers the entire body including a per-message nonce; rate-limiter is per-account + per-IP per FR-015. Async dispatch model preserves failure-closed: events are cancelled synchronously *before* async work begins, so a stalled async lookup can never accidentally authenticate a player. |
+| I. Security-First | PASS | Wire format for `alex_melan:obsidianauth/v1` (see `contracts/plugin-message-channel.md`) carries no secrets/codes; HMAC scope covers the entire body including a per-message nonce; rate-limiter is per-account + per-IP per FR-015. Async dispatch model preserves failure-closed: events are cancelled synchronously *before* async work begins, so a stalled async lookup can never accidentally authenticate a player. |
 | II. API-Only | PASS | Every Paper symbol used is in `io.papermc.paper.api` or `org.bukkit.*` (including the scheduler / Folia AsyncScheduler probe). Every Velocity symbol is in `com.velocitypowered.api.*` (including `proxy.getScheduler()` and `EventTask`). The `core` module has zero server-internal imports and zero scheduler imports — it depends only on `java.util.concurrent`. |
 | III. Pre-Auth Lockdown | PASS | Listener matrix in §"Project Structure / paper-plugin" cancels every event class enumerated in FR-007 synchronously on the main thread. The §"Async-on-Cancellable-Event protocol" formalizes the failure-closed semantics that hold under async dispatch. Velocity-side `ProxyChatListener` + `ProxyCommandListener` use `EventTask.async` / `resumeWhenComplete` to await `GATE_RESPONSE` without blocking the proxy event loop. |
 | IV. Encrypted Secrets | PASS | DAO contract in `contracts/storage-dao.md` exposes only `byte[] ciphertext, byte[] nonce, int keyVersion` to callers; plaintext is reconstructed only inside `AesGcmSealer.open(...)` on the async pool and is scrubbed (`Arrays.fill`) before the `CompletableFuture` completes. The main thread never sees plaintext bytes. |
-| V. Canonical Package & Repo | PASS | All Java packages under `org.alex_melan.totp.*`. README + CONTRIBUTING link to `https://github.com/AlexMelanFromRingo/` and reference the canonical repo as source of truth. |
+| V. Canonical Package & Repo | PASS | All Java packages under `org.alex_melan.obsidianauth.*`. README + CONTRIBUTING link to `https://github.com/AlexMelanFromRingo/` and reference the canonical repo as source of truth. |
 
 **Result**: post-design gates pass. **Complexity Tracking remains empty.**
 

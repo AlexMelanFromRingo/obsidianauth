@@ -1,46 +1,38 @@
 <!--
 Sync Impact Report
 ==================
-Version change: TEMPLATE → 1.0.0
-Bump rationale: Initial ratification. The previous constitution.md held only
-unresolved placeholder tokens; this commit defines the project's first
-governing principles, so a fresh MAJOR baseline (1.0.0) is appropriate.
+Version change: 1.0.0 → 1.0.1
+Bump rationale: PATCH bump. The only edits in this amendment are (a)
+clearing the TODO(PROJECT_NAME) placeholder by adopting the brand name
+"ObsidianAuth" and (b) updating the title line accordingly. No principle
+text, no governance rule, and no NON-NEGOTIABLE clause was added, removed,
+or weakened — per the Versioning policy these qualify as a non-semantic
+clarification.
 
-Modified principles (vs. template placeholders):
-- [PRINCIPLE_1_NAME] → I. Security-First (NON-NEGOTIABLE)
-- [PRINCIPLE_2_NAME] → II. API-Only Plugin Architecture (NON-NEGOTIABLE)
-- [PRINCIPLE_3_NAME] → III. Pre-Authentication Lockdown (NON-NEGOTIABLE)
-- [PRINCIPLE_4_NAME] → IV. Encrypted Secrets at Rest
-- [PRINCIPLE_5_NAME] → V. Canonical Package & Repository Layout
+Modified principles: none.
+Added sections: none.
+Removed sections: none.
 
-Added sections:
-- Security & Compliance Requirements (replaces [SECTION_2_NAME])
-- Development Workflow & Quality Gates (replaces [SECTION_3_NAME])
-- Governance (filled)
+Templates requiring updates: none — the templates referred to the project
+title only by placeholder.
 
-Removed sections: none
+Follow-up TODOs cleared:
+- TODO(PROJECT_NAME) — resolved. Brand name is "ObsidianAuth"; chosen for
+  its in-game associations with gated access (nether-portal frame),
+  authority (beacon base), and private encrypted storage (ender chest).
+  Canonical Java sub-namespace updated from `org.alex_melan.totp.*` to
+  `org.alex_melan.obsidianauth.*`. Operator-visible data folder is
+  `plugins/ObsidianAuth/`. Plugin-message channel is
+  `alex_melan:obsidianauth/v1`.
 
-Templates requiring updates:
-- ✅ .specify/templates/plan-template.md — "Constitution Check" already
-  references the constitution generically; no edits required, the Plan
-  command will read principles from this file at runtime.
-- ✅ .specify/templates/spec-template.md — no principle-specific edits
-  required; pre-auth lockdown and encryption belong in feature specs as
-  functional/security requirements driven by this constitution.
-- ✅ .specify/templates/tasks-template.md — categories already cover
-  security/auth/observability via the "Polish & Cross-Cutting" phase
-  example; no structural edits required.
-- ✅ .claude/skills/speckit-constitution — no agent-name leakage detected
-  in the user-facing outline.
-
-Follow-up TODOs:
-- TODO(PROJECT_NAME): Final brand name not yet chosen — candidates listed
-  in /ProjectPossibleNames.md (top picks: TotemAuth, Mine2FA, ObsidianAuth,
-  AuthCraft, VaultAuth). Update this file when ratified.
+Previous (initial) Sync Impact Report (1.0.0):
+- Initial ratification. All five principles introduced from template
+  placeholders. Three NON-NEGOTIABLE (Security-First, API-Only,
+  Pre-Auth Lockdown) plus Encrypted Secrets at Rest and Canonical
+  Package & Repository Layout.
 -->
 
-# TOTP Plugin Constitution
-<!-- TODO(PROJECT_NAME): replace working title once the brand name is selected (see ProjectPossibleNames.md). -->
+# ObsidianAuth Constitution
 
 ## Core Principles
 
@@ -236,4 +228,4 @@ The following gates MUST pass before merge to the default branch:
   constitution for any rule that governs *what is allowed*, not just
   *what is configured*.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13
+**Version**: 1.0.1 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-14
