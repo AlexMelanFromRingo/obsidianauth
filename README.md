@@ -51,8 +51,8 @@ The `core` module has zero Paper/Velocity dependencies and is unit-testable in i
 
 See [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart.md) for the full operator guide. The short version:
 
-1. Drop `totp-paper-plugin-*.jar` into your backend's `plugins/`.
-2. (Optional) Drop `totp-velocity-plugin-*.jar` into your proxy's `plugins/`.
+1. Drop `obsidianauth-paper-*.jar` into your backend's `plugins/`.
+2. (Optional) Drop `obsidianauth-velocity-*.jar` into your proxy's `plugins/`.
 3. Generate a 32-byte AES master key and reference it from `plugins/ObsidianAuth/config.yml` under `encryption.file.path` (mode `0600`, owned by the server user).
 4. Generate a 32-byte HMAC secret and export it as `TOTP_CHANNEL_HMAC` on **both** sides.
 5. Set `issuer.name` in `config.yml` to your server brand.
@@ -62,15 +62,25 @@ Run the smoke-test playbook in the quickstart before letting real players in.
 
 ---
 
-## Build (once source is committed)
+## Build
 
-The project will use Gradle Kotlin DSL. The expected invocation:
+Multi-module Gradle build (Kotlin DSL), Java 17 toolchain. To produce the two shaded,
+ready-to-deploy plugin JARs:
 
 ```bash
 ./gradlew :paper-plugin:shadowJar :velocity-plugin:shadowJar
 ```
 
-This is the canonical build command referenced by the constitution's Workflow gates.
+This is the canonical build command referenced by the constitution's Workflow gates. The
+JARs land in `paper-plugin/build/libs/obsidianauth-paper-<version>.jar` and
+`velocity-plugin/build/libs/obsidianauth-velocity-<version>.jar`, with runtime libraries
+(HikariCP, Flyway, ZXing) relocated under `org.alex_melan.obsidianauth.shaded.*`.
+
+`./gradlew build` additionally runs the unit + MockBukkit integration test suites and the
+`checkNoGoList` guard, which fails the build on any construct banned by the plan's
+[No-Go list](specs/001-totp-2fa-auth/plan.md) (NMS, Mixin, blocking futures in listeners /
+commands, `Cipher`/`Mac.doFinal` outside the core crypto primitives, literal passwords in
+config). Run it on its own with `./gradlew checkNoGoList`.
 
 ---
 
@@ -84,4 +94,4 @@ Issues, pull requests, and security disclosures go to the canonical repository a
 
 ## License
 
-Operator-selected — not pre-committed in this repository state. The downstream release will ship a chosen OSI-approved license alongside the first published artifact.
+[MIT](LICENSE) © Alex Melan. Release artifacts published elsewhere (Modrinth, Hangar, etc.) carry the same license and must point back to the canonical repository as the source of truth.

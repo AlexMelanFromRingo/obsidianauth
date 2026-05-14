@@ -31,7 +31,8 @@ If you're about to add a feature, run `/speckit-specify` and produce a new `spec
 
 Before requesting review, your branch MUST pass:
 
-1. `./gradlew build` on the supported toolchain (Java 17).
+1. `./gradlew build` on the supported toolchain (Java 17) — this runs the test suites and the
+   `checkNoGoList` grep guard. You can run the guard alone with `./gradlew checkNoGoList`.
 2. Unit tests for any crypto, encoding, or rate-limiting code you touched.
 3. Integration tests for any listener you touched (MockBukkit-backed in `paper-plugin/src/test/java`).
 4. A manual smoke test on a real Paper 1.20.1 instance (and Velocity 3.3.x if you touched the proxy) **if** your change touches listeners, commands, storage, or the channel codec. State in the PR description that you ran it.
@@ -60,7 +61,7 @@ If you think the spec or the constitution is wrong about one of these, **say so 
 
 ## Local development
 
-Once source lands on the branch:
+Build from a clone:
 
 ```bash
 git clone https://github.com/AlexMelanFromRingo/<repo>.git
@@ -68,13 +69,15 @@ cd <repo>
 ./gradlew build
 ```
 
-To produce shaded plugin JARs:
+To produce the shaded plugin JARs:
 
 ```bash
 ./gradlew :paper-plugin:shadowJar :velocity-plugin:shadowJar
 ```
 
-The JARs land in `paper-plugin/build/libs/` and `velocity-plugin/build/libs/`. For local smoke testing, follow the playbook in [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart.md) §3.
+They land as `paper-plugin/build/libs/obsidianauth-paper-<version>.jar` and
+`velocity-plugin/build/libs/obsidianauth-velocity-<version>.jar`. For local smoke testing,
+follow the playbook in [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart.md) §3.
 
 ---
 

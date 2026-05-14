@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/AlexMelanFromRingo/obsidianauth/security/advisories/new
+    about: Do NOT open a public issue for security vulnerabilities — report privately. See SECURITY.md.
+  - name: Feature request / new capability
+    url: https://github.com/AlexMelanFromRingo/obsidianauth/discussions
+    about: New features go through the Spec-Kit flow (/speckit-specify). Start a Discussion to propose one.

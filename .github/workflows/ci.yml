@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build · test · No-Go guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # paper-plugin's test toolchain is Java 21 (MockBukkit ships 21 bytecode); the
+      # shipped plugin bytecode stays Java 17 via --release 17. Gradle's foojay toolchain
+      # resolver auto-provisions the 17 toolchain for the core/velocity modules.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # `build` compiles all three modules, runs the unit + MockBukkit integration suites,
+      # produces the shaded JARs, and runs `checkNoGoList` (wired into `check`).
+      - name: Build, test, and run the No-Go guard
+        run: ./gradlew build --stacktrace --no-daemon
+
+      - name: Upload shaded plugin JARs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: obsidianauth-plugins
+          path: |
+            paper-plugin/build/libs/obsidianauth-paper-*.jar
+            velocity-plugin/build/libs/obsidianauth-velocity-*.jar
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          if-no-files-found: ignore
