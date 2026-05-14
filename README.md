@@ -49,7 +49,7 @@ The `core` module has zero Paper/Velocity dependencies and is unit-testable in i
 
 ## Quick install
 
-See [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart.md) for the full operator guide. The short version:
+See [`specs/001-totp-2fa-auth/quickstart.md`](specs/001-totp-2fa-auth/quickstart.md) for the full operator guide, and [`docs/key-setup.md`](docs/key-setup.md) for the precise key/secret preparation procedure. The short version:
 
 1. Drop `obsidianauth-paper-*.jar` into your backend's `plugins/`.
 2. (Optional) Drop `obsidianauth-velocity-*.jar` into your proxy's `plugins/`.
