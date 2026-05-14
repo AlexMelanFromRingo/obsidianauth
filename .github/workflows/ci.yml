@@ -38,7 +38,7 @@ jobs:
 
       - name: Upload shaded plugin JARs
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: obsidianauth-plugins
           path: |
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: '**/build/reports/tests/'
