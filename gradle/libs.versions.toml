@@ -1,34 +1,34 @@
 [versions]
 # Platform APIs — compile-only, must NOT be shaded
-paper-api          = "1.20.1-R0.1-SNAPSHOT"
-velocity-api       = "3.3.0-SNAPSHOT"
+paper-api          = "26.1.2.build.63-stable"
+velocity-api       = "4.0.0-SNAPSHOT"
 
 # Runtime libraries — shaded under org.alex_melan.obsidianauth.shaded.*
-zxing-core         = "3.5.3"
-hikaricp           = "5.1.0"
+zxing-core         = "3.5.4"
+hikaricp           = "7.0.2"
 # Flyway 9.x ships built-in SQLite support (the 10.x split-into-modules approach pulled
 # SQLite out into a separate community artifact that is not on Maven Central). For our
 # minimal usage of Flyway (load and run V1/V2 migration scripts) 9.22.3 is more than enough.
-flyway-core        = "9.22.3"
-sqlite-jdbc        = "3.46.1.0"
-mysql-connector    = "8.4.0"
+flyway-core        = "12.6.1"
+sqlite-jdbc        = "3.53.1.0"
+mysql-connector    = "9.7.0"
 
 # Logging facade (provided by the platform at runtime; compile-only here)
-slf4j-api          = "2.0.13"
+slf4j-api          = "2.0.18"
 
 # TOML parser for the Velocity-side config file. NightConfig is small (~200 KB) and BSD-licensed.
-nightconfig        = "3.8.1"
+nightconfig        = "3.8.4"
 
 # Test libraries
-junit-bom          = "5.10.3"
-mockito            = "5.12.0"
-assertj            = "3.26.0"
+junit-bom          = "6.0.3"
+mockito            = "5.23.0"
+assertj            = "3.27.7"
 # MockBukkit 3.x is the line that supports MC 1.20.x (4.x targets 1.21+).
 # Published on Maven Central under the legacy com.github.seeseemelk group.
 mockbukkit         = "3.93.2"
 
 # Build plugins
-shadow             = "8.3.6"
+shadow             = "9.4.1"
 
 [libraries]
 paper-api          = { module = "io.papermc.paper:paper-api",                version.ref = "paper-api" }
