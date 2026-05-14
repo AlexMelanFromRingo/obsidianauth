@@ -4,7 +4,7 @@ paper-api          = "1.20.1-R0.1-SNAPSHOT"
 velocity-api       = "3.3.0-SNAPSHOT"
 
 # Runtime libraries — shaded under org.alex_melan.obsidianauth.shaded.*
-zxing-core         = "3.5.3"
+zxing-core         = "3.5.4"
 hikaricp           = "5.1.0"
 # Flyway 9.x ships built-in SQLite support (the 10.x split-into-modules approach pulled
 # SQLite out into a separate community artifact that is not on Maven Central). For our
