@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # paper-plugin's test toolchain is Java 21 (MockBukkit ships 21 bytecode); the
       # shipped plugin bytecode stays Java 17 via --release 17. Gradle's foojay toolchain
