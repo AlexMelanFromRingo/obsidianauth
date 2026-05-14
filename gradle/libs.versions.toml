@@ -9,7 +9,7 @@ hikaricp           = "5.1.0"
 # Flyway 9.x ships built-in SQLite support (the 10.x split-into-modules approach pulled
 # SQLite out into a separate community artifact that is not on Maven Central). For our
 # minimal usage of Flyway (load and run V1/V2 migration scripts) 9.22.3 is more than enough.
-flyway-core        = "9.22.3"
+flyway-core        = "12.6.1"
 sqlite-jdbc        = "3.46.1.0"
 mysql-connector    = "8.4.0"
 
